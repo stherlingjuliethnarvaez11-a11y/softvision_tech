@@ -1,0 +1,103 @@
+{
+  "entities": {
+    "users": {
+      "title": "Usuarios",
+      "description": "Perfiles de usuarios con roles y datos de contacto",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["visitante", "usuario", "dueno", "admin"] },
+        "photoURL": { "type": "string" },
+        "phone": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["uid", "email", "displayName", "role", "createdAt"]
+    },
+    "categories": {
+      "title": "Categorías",
+      "description": "Clasificación de comercios locales",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "slug": { "type": "string" },
+        "iconName": { "type": "string" },
+        "description": { "type": "string" },
+        "businessCount": { "type": "number" }
+      },
+      "required": ["id", "name", "slug"]
+    },
+    "businesses": {
+      "title": "Comercios",
+      "description": "Negocios registrados en el directorio local",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "categoryId": { "type": "string" },
+        "categoryName": { "type": "string" },
+        "address": { "type": "string" },
+        "zone": { "type": "string" },
+        "phone": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "email": { "type": "string" },
+        "website": { "type": "string" },
+        "hours": { "type": "object" },
+        "description": { "type": "string" },
+        "services": { "type": "array", "items": { "type": "string" } },
+        "imageUrl": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "ownerName": { "type": "string" },
+        "ratingAverage": { "type": "number" },
+        "reviewCount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pendiente", "aprobado", "rechazado"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "rejectionReason": { "type": "string" },
+        "featured": { "type": "boolean" }
+      },
+      "required": ["id", "name", "categoryId", "address", "phone", "ownerId", "status", "createdAt"]
+    },
+    "reviews": {
+      "title": "Reseñas",
+      "description": "Calificaciones y opiniones comunitarias",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "businessId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userAvatar": { "type": "string" },
+        "rating": { "type": "number" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "status": { "type": "string", "enum": ["visible", "oculto", "reportado"] },
+        "helpfulVotes": { "type": "number" },
+        "reportedReason": { "type": "string" }
+      },
+      "required": ["id", "businessId", "userId", "userName", "rating", "comment", "createdAt", "status"]
+    },
+    "security_alerts": {
+      "title": "Alertas de Seguridad",
+      "description": "Registro y monitoreo de eventos de seguridad y gobernanza",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "eventType": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "severity": { "type": "string", "enum": ["baja", "media", "alta", "critica"] },
+        "status": { "type": "string", "enum": ["activa", "investigando", "resuelta"] },
+        "sourceIp": { "type": "string" },
+        "targetEntity": { "type": "string" },
+        "targetId": { "type": "string" },
+        "userUid": { "type": "string" },
+        "actionTaken": { "type": "string" }
+      },
+      "required": ["id", "timestamp", "eventType", "title", "severity", "status"]
+    }
+  }
+}

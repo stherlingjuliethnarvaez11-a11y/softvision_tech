@@ -1,0 +1,6 @@
+{
+  "name": "Softvision Tech - Directorio Digital de Negocios",
+  "description": "Plataforma digital accesible y confiable para registrar, clasificar, consultar y calificar negocios locales con arquitectura MVC y seguridad integral.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

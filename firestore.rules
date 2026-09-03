@@ -1,0 +1,136 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // SOFTVISION TECH — Reglas de Seguridad Firestore (Principio de Mínimo Privilegio)
+    // Producto: Directorio Digital de Negocios Locales
+    // ===============================================================
+
+    // --- Funciones auxiliares de autenticación y autorización ---
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function getUserRole() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? getUserData().role
+        : 'visitante';
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        getUserRole() == 'admin' || 
+        request.auth.token.role == 'admin' ||
+        request.auth.token.admin == true
+      );
+    }
+
+    function isBusinessOwner(ownerId) {
+      return isAuthenticated() && (request.auth.uid == ownerId || isAdmin());
+    }
+
+    // --- Colección: USUARIOS (users) ---
+    match /users/{userId} {
+      // Cualquier usuario puede leer perfiles básicos
+      allow read: if true;
+
+      // Creación al registrarse
+      allow create: if isAuthenticated() && request.auth.uid == userId
+        && request.resource.data.role in ['usuario', 'dueno'] // No puede autoasignarse 'admin'
+        && request.resource.data.email is string
+        && request.resource.data.displayName is string;
+
+      // Actualización: solo el propio usuario o un admin
+      // Restricción: solo admin puede modificar el campo 'role'
+      allow update: if isAuthenticated() && (
+        (isOwner(userId) && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'isBlocked']))) ||
+        isAdmin()
+      );
+
+      // Eliminación: solo administradores
+      allow delete: if isAdmin();
+    }
+
+    // --- Colección: CATEGORÍAS (categories) ---
+    match /categories/{categoryId} {
+      // Lectura pública para clasificar negocios
+      allow read: if true;
+
+      // Solo administradores pueden crear, modificar o eliminar categorías
+      allow write: if isAdmin();
+    }
+
+    // --- Colección: NEGOCIOS (businesses) ---
+    match /businesses/{businessId} {
+      // Lectura pública si está aprobado. Si está pendiente o rechazado, solo su dueño o admin
+      allow read: if resource.data.status == 'aprobado' ||
+        (isAuthenticated() && (resource.data.ownerId == request.auth.uid || isAdmin()));
+
+      // Creación: usuarios con rol 'dueno' o 'admin'
+      allow create: if isAuthenticated() && (getUserRole() in ['dueno', 'admin'])
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 3 && request.resource.data.name.size() <= 120
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 1500
+        && request.resource.data.phone is string
+        && (isAdmin() ? true : request.resource.data.status == 'pendiente'); // Por defecto entra como pendiente de moderación
+
+      // Actualización: solo el dueño o un admin
+      // El dueño no puede auto-aprobarse el negocio (no puede cambiar status a 'aprobado')
+      allow update: if isAuthenticated() && (
+        (resource.data.ownerId == request.auth.uid && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'ratingAverage', 'reviewCount']))) ||
+        isAdmin()
+      );
+
+      // Eliminación: solo administradores
+      allow delete: if isAdmin();
+    }
+
+    // --- Colección: RESEÑAS Y COMENTARIOS (reviews) ---
+    match /reviews/{reviewId} {
+      // Lectura pública de reseñas con estado visible
+      allow read: if resource.data.status == 'visible' || isAdmin();
+
+      // Creación: solo usuarios autenticados
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.businessId is string
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1 && request.resource.data.rating <= 5
+        && request.resource.data.comment is string
+        && request.resource.data.comment.size() >= 5 && request.resource.data.comment.size() <= 800
+        && request.resource.data.status == 'visible';
+
+      // Actualización: solo el autor (su propio comentario) o un admin para moderar
+      allow update: if isAuthenticated() && (
+        (resource.data.userId == request.auth.uid && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'businessId', 'userId']))) ||
+        isAdmin()
+      );
+
+      // Eliminación: solo el autor o un admin
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // --- Colección: ALERTAS DE SEGURIDAD Y MONITOREO (security_alerts) ---
+    match /security_alerts/{alertId} {
+      // Lectura exclusiva para el equipo de seguridad y administradores
+      allow read: if isAdmin();
+
+      // Escritura: creación por el sistema de detección en tiempo real
+      allow create: if true;
+
+      // Actualización o resolución de la alerta: solo administradores
+      allow update, delete: if isAdmin();
+    }
+  }
+}
